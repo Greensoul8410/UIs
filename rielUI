@@ -140,16 +140,59 @@ end
 function GetMidPos(mainFrame)
 	return UDim2.new(0, (obj.ViewportSize.X/2-mainFrame.Size.X.Offset/ 2), 0, (obj.ViewportSize.Y/2-mainFrame.Size.Y.Offset/2))
 end
+
+-- Helper to safely get player display name with fallback
+local function GetDisplayName()
+	local success, result = pcall(function()
+		local dn = game.Players.LocalPlayer.DisplayName
+		if dn and dn ~= "" then
+			return dn
+		end
+		return game.Players.LocalPlayer.Name
+	end)
+	if success and result then
+		return result
+	end
+	return game.Players.LocalPlayer.Name
+end
+
+-- Helper to safely get player username
+local function GetUsername()
+	local success, result = pcall(function()
+		return game.Players.LocalPlayer.Name
+	end)
+	if success and result then
+		return result
+	end
+	return "Player"
+end
+
+-- Helper to safely load avatar thumbnail
+local function LoadAvatar(callback)
+	task.spawn(function()
+		local success, result = pcall(function()
+			return game:GetService("Players"):GetUserThumbnailAsync(
+				game.Players.LocalPlayer.UserId,
+				Enum.ThumbnailType.HeadShot,
+				Enum.ThumbnailSize.Size420x420
+			)
+		end)
+		if success and result then
+			callback(result)
+		end
+	end)
+end
+
 function obj:Window(cfw)
 	cfw = cfw or {}
 	cfw.Title = cfw.Title or "Window 11 UI "
 	cfw.Description = cfw.Description or ""
-	cfw.User = cfw.User or "Dustii"
+	cfw.User = cfw.User or GetDisplayName()
 	cfw.IconUser = cfw.IconUser or ""
 	cfw.UseAcrylic = cfw.UseAcrylic or false
 	cfw.Size = cfw.Size or UDim2.new(0, 600,0, 420)
 	cfw.DiscordStatus = cfw.DiscordStatus or "Cyndral.dev"
-	cfw.DisplayNameDiscord = cfw.DisplayNameDiscord or "@_nmduc0311"
+	cfw.DisplayNameDiscord = cfw.DisplayNameDiscord or "@" .. GetUsername()
 	cfw.DiscordDescription = cfw.DiscordDescription or ""
 	cfw.KeyCode = cfw.KeyCode or Enum.KeyCode.RightControl
 	local Window = Instance.new("ScreenGui")
@@ -605,7 +648,8 @@ function obj:Window(cfw)
 	NamePlayer.Position = UDim2.new(0, 52, 0, 14)
 	NamePlayer.Size = UDim2.new(1, -60, 0, 12)
 	NamePlayer.FontFace = Font.new([[rbxasset://fonts/families/GothamSSm.json]], Enum.FontWeight.Bold, Enum.FontStyle.Normal)
-	NamePlayer.Text = "Dustii"
+	-- FIXED: Use player's display name with fallback
+	NamePlayer.Text = GetDisplayName()
 	NamePlayer.TextColor3 = Color3.fromRGB(230, 230, 230)
 	NamePlayer.TextSize = 13.000
 	NamePlayer.TextWrapped = true
@@ -628,7 +672,8 @@ function obj:Window(cfw)
 	LogoPlayer.BorderSizePixel = 0
 	LogoPlayer.Position = UDim2.new(0.5, 0, 0.5, 0)
 	LogoPlayer.Size = UDim2.new(1, 0, 1, 0)
-	LogoPlayer.Image = "rbxassetid://117424306228316"
+	-- FIXED: placeholder until async loads
+	LogoPlayer.Image = ""
 	UICorner_3.CornerRadius = UDim.new(0, 1000)
 	UICorner_3.Parent = LogoPlayer
 	UICorner_4.CornerRadius = UDim.new(0, 1000)
@@ -883,7 +928,7 @@ function obj:Window(cfw)
 	DiscordFrame.Name = "DiscordFrame"
 	DiscordFrame.Parent = DropShadow_2
 	DiscordFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-	DiscordFrame.BackgroundColor3 = Color3.fromRGB(255, 5, 9)
+	DiscordFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0) -- CHANGED: black banner
 	DiscordFrame.BorderColor3 = Color3.fromRGB(0, 0, 0)
 	DiscordFrame.BorderSizePixel = 0
 	DiscordFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -911,7 +956,8 @@ function obj:Window(cfw)
 	NamePlayer_2.Size = UDim2.new(1, -30, 0, 16)
 	NamePlayer_2.ZIndex = 3
 	NamePlayer_2.Font = Enum.Font.GothamBold
-	NamePlayer_2.Text = "Dustii"
+	-- FIXED: Display name (nickname) as the main name
+	NamePlayer_2.Text = GetDisplayName()
 	NamePlayer_2.TextColor3 = Color3.fromRGB(255, 255, 255)
 	NamePlayer_2.TextSize = 18.000
 	NamePlayer_2.TextXAlignment = Enum.TextXAlignment.Left
@@ -925,7 +971,8 @@ function obj:Window(cfw)
 	DescriptionPlayer_2.Size = UDim2.new(1, -30, 0, 14)
 	DescriptionPlayer_2.ZIndex = 3
 	DescriptionPlayer_2.Font = Enum.Font.GothamBold
-	DescriptionPlayer_2.Text = "@_nmduc0311"
+	-- FIXED: Username as the handle
+	DescriptionPlayer_2.Text = "@" .. GetUsername()
 	DescriptionPlayer_2.TextColor3 = Color3.fromRGB(255, 255, 255)
 	DescriptionPlayer_2.TextSize = 12.000
 	DescriptionPlayer_2.TextTransparency = 0.600
@@ -950,77 +997,8 @@ function obj:Window(cfw)
 	DiscordUnderUnderTop.BorderSizePixel = 0
 	DiscordUnderUnderTop.Position = UDim2.new(0, 12, 0, 4)
 	DiscordUnderUnderTop.Size = UDim2.new(1, -24, 0, 25)
-	DiscordTab.Name = "DiscordTab"
-	DiscordTab.Parent = DiscordUnderUnderTop
-	DiscordTab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordTab.BackgroundTransparency = 0.999
-	DiscordTab.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	DiscordTab.BorderSizePixel = 0
-	DiscordTab.LayoutOrder = 1
-	DiscordTab.Size = UDim2.new(0, 40, 1, 0)
-	DiscordButtonTab.Name = "DiscordButtonTab"
-	DiscordButtonTab.Parent = DiscordTab
-	DiscordButtonTab.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordButtonTab.BackgroundTransparency = 0.999
-	DiscordButtonTab.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	DiscordButtonTab.BorderSizePixel = 0
-	DiscordButtonTab.Size = UDim2.new(1, 0, 1, 0)
-	DiscordButtonTab.Font = Enum.Font.GothamBold
-	DiscordButtonTab.Text = "Activity"
-	DiscordButtonTab.TextColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordButtonTab.TextSize = 11.000
-	DiscordButtonTab.TextTransparency = 0.600
-	ChoosingFrameDiscord.Name = "ChoosingFrameDiscord"
-	ChoosingFrameDiscord.Parent = DiscordTab
-	ChoosingFrameDiscord.AnchorPoint = Vector2.new(0.5, 1)
-	ChoosingFrameDiscord.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	ChoosingFrameDiscord.BackgroundTransparency = 0.999
-	ChoosingFrameDiscord.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	ChoosingFrameDiscord.BorderSizePixel = 0
-	ChoosingFrameDiscord.Position = UDim2.new(0.5, 0, 1, 0)
-	ChoosingFrameDiscord.Size = UDim2.new(1, -14, 0, 1)
-	UIStroke_18.Parent = ChoosingFrameDiscord
-	UIStroke_18.Color = Color3.fromRGB(255, 255, 255)
-	UIStroke_18.Transparency = 0.999
-	UIStroke_18.Thickness = 0.600
-	UICorner_49.CornerRadius = UDim.new(0, 100)
-	UICorner_49.Parent = ChoosingFrameDiscord
-	DiscordTab_2.Name = "DiscordTab"
-	DiscordTab_2.Parent = DiscordUnderUnderTop
-	DiscordTab_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordTab_2.BackgroundTransparency = 0.999
-	DiscordTab_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	DiscordTab_2.BorderSizePixel = 0
-	DiscordTab_2.Size = UDim2.new(0, 50, 1, 0)
-	DiscordButtonTab_2.Name = "DiscordButtonTab"
-	DiscordButtonTab_2.Parent = DiscordTab_2
-	DiscordButtonTab_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordButtonTab_2.BackgroundTransparency = 0.999
-	DiscordButtonTab_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	DiscordButtonTab_2.BorderSizePixel = 0
-	DiscordButtonTab_2.Size = UDim2.new(1, 0, 1, 0)
-	DiscordButtonTab_2.Font = Enum.Font.GothamBold
-	DiscordButtonTab_2.Text = "About Me"
-	DiscordButtonTab_2.TextColor3 = Color3.fromRGB(255, 255, 255)
-	DiscordButtonTab_2.TextSize = 11.000
-	ChoosingFrameDiscord_2.Name = "ChoosingFrameDiscord"
-	ChoosingFrameDiscord_2.Parent = DiscordTab_2
-	ChoosingFrameDiscord_2.AnchorPoint = Vector2.new(0.5, 1)
-	ChoosingFrameDiscord_2.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	ChoosingFrameDiscord_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
-	ChoosingFrameDiscord_2.BorderSizePixel = 0
-	ChoosingFrameDiscord_2.Position = UDim2.new(0.5, 0, 1, 0)
-	ChoosingFrameDiscord_2.Size = UDim2.new(1, -14, 0, 1)
-	UIStroke_19.Parent = ChoosingFrameDiscord_2
-	UIStroke_19.Color = Color3.fromRGB(255, 255, 255)
-	UIStroke_19.Thickness = 0.600
-	UICorner_50.CornerRadius = UDim.new(0, 100)
-	UICorner_50.Parent = ChoosingFrameDiscord_2
-	DiscordTabLayout.Name = "DiscordTabLayout"
-	DiscordTabLayout.Parent = DiscordUnderUnderTop
-	DiscordTabLayout.FillDirection = Enum.FillDirection.Horizontal
-	DiscordTabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-	DiscordTabLayout.Padding = UDim.new(0, 12)
+	-- CHANGED: Removed Activity tab entirely, About Me shown directly
+	DiscordUnderUnderTop.Visible = false -- hide the tab bar since only About Me remains
 	DiscordAboutMe.Name = "DiscordAboutMe"
 	DiscordAboutMe.Parent = DiscordUnderUnder
 	DiscordAboutMe.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
@@ -1032,7 +1010,10 @@ function obj:Window(cfw)
 	DiscordAboutMe.Position = UDim2.new(0, 15, 0, 45)
 	DiscordAboutMe.Size = UDim2.new(1, -30, 0, 70)
 	DiscordAboutMe.Font = Enum.Font.GothamMedium
-	DiscordAboutMe.Text = "Nigga whatsup\n<font color='rgb(0, 128, 255)'>e-z.bio/ngvit</font>"
+	-- CHANGED: Replaced Member Since + date with welcome message
+	DiscordAboutMe.Position = UDim2.new(0, 15, 0, 15) -- move up since tab bar is hidden
+	DiscordAboutMe.Size = UDim2.new(1, -30, 1, -30) -- fill more space
+	DiscordAboutMe.Text = "Welcome to Darksoul Hub. Join our discord server for more updates and news about games."
 	DiscordAboutMe.TextColor3 = Color3.fromRGB(255, 255, 255)
 	DiscordAboutMe.TextSize = 11.000
 	DiscordAboutMe.TextWrapped = true
@@ -1048,6 +1029,7 @@ function obj:Window(cfw)
 	DiscordMemberSince.Position = UDim2.new(0, 15, 0, 95)
 	DiscordMemberSince.Size = UDim2.new(1, -30, 0, 15)
 	DiscordMemberSince.Font = Enum.Font.GothamBold
+	DiscordMemberSince.Visible = false -- CHANGED: replaced with welcome message above
 	DiscordMemberSince.Text = "Member Since"
 	DiscordMemberSince.TextColor3 = Color3.fromRGB(255, 255, 255)
 	DiscordMemberSince.TextSize = 11.000
@@ -1063,7 +1045,9 @@ function obj:Window(cfw)
 	DiscordMemberSinceReal.Position = UDim2.new(0, 15, 0, 115)
 	DiscordMemberSinceReal.Size = UDim2.new(1, -30, 0, 15)
 	DiscordMemberSinceReal.Font = Enum.Font.GothamMedium
-	DiscordMemberSinceReal.Text = "11 November 2021"
+	DiscordMemberSinceReal.Visible = false -- CHANGED: replaced with welcome message
+	-- CHANGED: Removed account age loading logic, no longer needed
+	DiscordMemberSinceReal.Text = ""
 	DiscordMemberSinceReal.TextColor3 = Color3.fromRGB(255, 255, 255)
 	DiscordMemberSinceReal.TextSize = 12.000
 	DiscordMemberSinceReal.TextWrapped = true
@@ -1088,9 +1072,15 @@ function obj:Window(cfw)
 	LogoInfo.Position = UDim2.new(0.5, 0, 0.5, 0)
 	LogoInfo.Size = UDim2.new(1, 0, 1, 0)
 	LogoInfo.ZIndex = 3
-	LogoInfo.Image = "rbxassetid://117424306228316"
+	-- FIXED: placeholder until async loads
+	LogoInfo.Image = ""
 	UICorner_51.CornerRadius = UDim.new(0, 100)
 	UICorner_51.Parent = LogoInfo
+	-- FIXED: Load both avatars safely in background
+	LoadAvatar(function(img)
+		LogoPlayer.Image = img
+		LogoInfo.Image = img
+	end)
 	StatusFrame.Name = "StatusFrame"
 	StatusFrame.Parent = RealLogoFrame
 	StatusFrame.AnchorPoint = Vector2.new(1, 1)
@@ -1112,6 +1102,7 @@ function obj:Window(cfw)
 	StatusImage.BorderSizePixel = 0
 	StatusImage.Size = UDim2.new(1, 0, 1, 0)
 	StatusImage.Image = "rbxassetid://99751366504614"
+	StatusImage.ImageColor3 = Color3.fromRGB(35, 165, 90) -- CHANGED: green online dot
 	UICorner_53.CornerRadius = UDim.new(0, 100)
 	UICorner_53.Parent = StatusImage
 	UICorner_54.CornerRadius = UDim.new(0, 100)
@@ -1142,7 +1133,7 @@ function obj:Window(cfw)
 	Frame_2.BorderColor3 = Color3.fromRGB(0, 0, 0)
 	Frame_2.BorderSizePixel = 0
 	Frame_2.Position = UDim2.new(0, 0, 0, 10)
-	Frame_2.Size = UDim2.new(0, 120, 0, 28)
+	Frame_2.Size = UDim2.new(0, 175, 0, 28) -- CHANGED: wider to fit "Darksoul Hub on Top"
 	Frame_2.ZIndex = 3
 	UICorner_56.CornerRadius = UDim.new(0, 12)
 	UICorner_56.Parent = Frame_2
@@ -1176,7 +1167,7 @@ function obj:Window(cfw)
 	DescriptionPlayer_3.Position = UDim2.new(0, 8, 0.5, 0)
 	DescriptionPlayer_3.Size = UDim2.new(1, -20, 0, 14)
 	DescriptionPlayer_3.Font = Enum.Font.GothamBold
-	DescriptionPlayer_3.Text = "Cyndral.dev"
+	DescriptionPlayer_3.Text = "Darksoul Hub on Top" -- CHANGED: updated status text
 	DescriptionPlayer_3.TextColor3 = Color3.fromRGB(255, 255, 255)
 	DescriptionPlayer_3.TextSize = 11.000
 	DescriptionPlayer_3.TextXAlignment = Enum.TextXAlignment.Left
@@ -1304,16 +1295,19 @@ function obj:Window(cfw)
 		AnotherFrame.Visible = false
 	end)
 	obj.MakeDraggable(Window11,Top)
+	-- CHANGED: Search now scans ALL tabs and ALL sections across the entire UI
 	SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-		for r,v in next, LayersFolder:GetChildren() do
-			for con, cu in next, v:GetChildren() do
-				if cu:IsA("Frame") then
-					local RealSearch = cu.Name:lower():gsub(" ", "")
-					local InputText = SearchBox.Text:lower():gsub(" ", "")
-					if SearchBox.Text == "" or string.find(RealSearch, InputText) then
-						cu.Visible = true
-					else
-						cu.Visible = false
+		local InputText = SearchBox.Text:lower():gsub(" ", "")
+		for _, page in next, LayersFolder:GetChildren() do
+			if page:IsA("ScrollingFrame") then
+				for _, item in next, page:GetChildren() do
+					if item:IsA("Frame") then
+						local RealSearch = item.Name:lower():gsub(" ", "")
+						if SearchBox.Text == "" or string.find(RealSearch, InputText) then
+							item.Visible = true
+						else
+							item.Visible = false
+						end
 					end
 				end
 			end
@@ -1840,7 +1834,7 @@ function obj:Window(cfw)
 						obj.TweenObject({ToggleSwitch, 0.5, "BackgroundTransparency", 0.999})
 						obj.TweenObject({ToggleCircle, 0.5, "BackgroundColor3", Color3.fromRGB(113, 111, 112)})
 						obj.TweenObject({ToggleCircle, 0.5, "Position", UDim2.new(0, 2, 0.5, 0)})
-						obj.TweenObject({UIStroke_6, 0.5, "Color", Color3.fromRGB(113, 111, 112)}) -- 
+						obj.TweenObject({UIStroke_6, 0.5, "Color", Color3.fromRGB(113, 111, 112)})
 						ToggleOnOff.Text = "Off"
 					end
 					ToggleFunc.Enabled = boolean
@@ -2108,7 +2102,7 @@ function obj:Window(cfw)
 					Option.Name = "Option"
 					Option.Parent = ScrollSelect
 					Option.BackgroundColor3 = Color3.fromRGB(230, 230, 230)
-					Option.BackgroundTransparency = 0.999 -- 950
+					Option.BackgroundTransparency = 0.999
 					Option.BorderColor3 = Color3.fromRGB(0, 0, 0)
 					Option.BorderSizePixel = 0
 					Option.Size = UDim2.new(1, -5, 0, 26)
@@ -2144,7 +2138,6 @@ function obj:Window(cfw)
 					UIListLayout_6.Parent = ScrollSelect
 					UIListLayout_6.SortOrder = Enum.SortOrder.LayoutOrder
 					UIListLayout_6.Padding = UDim.new(0, 3)
-					-- ChooseFrame --
 					local ChooseFrame = Instance.new("Frame")
 					local UIStroke_14 = Instance.new("UIStroke")
 					local UICorner_38 = Instance.new("UICorner")
@@ -2577,6 +2570,7 @@ function obj:Window(cfw)
 
 		if config.Logo then
 			LogoPlayer.Image = config.Logo
+			LogoInfo.Image = config.Logo
 		end
 
 		return API
@@ -2584,6 +2578,5 @@ function obj:Window(cfw)
 
 	return API
 end
-
 
 return obj
