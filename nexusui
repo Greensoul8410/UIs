@@ -1462,68 +1462,124 @@ function obj:Window(cfw)
 
 		-- [FEATURE] Redz-style flat Section (labeled divider)
 		-- [FIX] Fixed typo: both AddSection and AddSecion work
+		-- [FIX] Single shared counter for ALL content (sections, buttons,
+		--       toggles) so insertion order is always preserved correctly
+		local ContentOrder = 0
+
 		local function MakeSection(ConfigSelection, targetParent)
 			ConfigSelection = ConfigSelection or {}
 			ConfigSelection.Title = ConfigSelection.Title or "Section"
 			ConfigSelection.Icon  = ConfigSelection.Icon  or ""
 
-			-- Divider row
+			-- [FIX] Each section gets the next slot in the shared counter
+			ContentOrder = ContentOrder + 1
+
+			-- Outer row: uses a horizontal UIListLayout so icon +
+			-- label + line all sit in a single row cleanly
 			local SectionRow = Instance.new("Frame")
 			SectionRow.Name = ConfigSelection.Title
 			SectionRow.Parent = targetParent
 			SectionRow.BackgroundTransparency = 1
 			SectionRow.BorderSizePixel = 0
-			SectionRow.Size = UDim2.new(1, -8, 0, 22)
-			SectionRow.LayoutOrder = 0
+			SectionRow.Size = UDim2.new(1, -8, 0, 20)
+			SectionRow.LayoutOrder = ContentOrder
+			SectionRow.ClipsDescendants = false
+
+			local RowLayout = Instance.new("UIListLayout")
+			RowLayout.FillDirection = Enum.FillDirection.Horizontal
+			RowLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+			RowLayout.SortOrder = Enum.SortOrder.LayoutOrder
+			RowLayout.Padding = UDim.new(0, 4)
+			RowLayout.Parent = SectionRow
+
+			-- Left padding
+			local LeftPad = Instance.new("Frame")
+			LeftPad.BackgroundTransparency = 1
+			LeftPad.Size = UDim2.new(0, 2, 1, 0)
+			LeftPad.BorderSizePixel = 0
+			LeftPad.LayoutOrder = 0
+			LeftPad.Parent = SectionRow
 
 			-- Icon (optional)
 			local hasSecIcon = ConfigSelection.Icon ~= nil and ConfigSelection.Icon ~= ""
 			if hasSecIcon then
 				local SecIcon = Instance.new("ImageLabel")
 				SecIcon.Name = "SectionIcon"
-				SecIcon.Parent = SectionRow
-				SecIcon.AnchorPoint = Vector2.new(0, 0.5)
 				SecIcon.BackgroundTransparency = 1
-				SecIcon.Position = UDim2.new(0, 2, 0.5, 0)
-				SecIcon.Size = UDim2.new(0, 13, 0, 13)
+				SecIcon.Size = UDim2.new(0, 12, 0, 12)
 				SecIcon.Image = ConfigSelection.Icon
-				SecIcon.ImageColor3 = Color3.fromRGB(150, 150, 150)
+				SecIcon.ImageColor3 = Color3.fromRGB(130, 130, 130)
+				SecIcon.LayoutOrder = 1
+				SecIcon.Parent = SectionRow
 			end
 
-			local labelX = hasSecIcon and 20 or 2
-
-			-- Section label
+			-- Label (AutomaticSize so TextBounds never matters)
 			local SectionLabel = Instance.new("TextLabel")
 			SectionLabel.Name = "SectionLabel"
-			SectionLabel.Parent = SectionRow
-			SectionLabel.AnchorPoint = Vector2.new(0, 0.5)
 			SectionLabel.BackgroundTransparency = 1
-			SectionLabel.Position = UDim2.new(0, labelX, 0.5, 0)
-			SectionLabel.Size = UDim2.new(0, 80, 0, 12)
+			SectionLabel.AutomaticSize = Enum.AutomaticSize.X
+			SectionLabel.Size = UDim2.new(0, 0, 1, 0) -- width driven by AutomaticSize
 			SectionLabel.Font = Enum.Font.GothamBold
 			SectionLabel.Text = ConfigSelection.Title
-			SectionLabel.TextColor3 = Color3.fromRGB(140, 140, 140)
+			SectionLabel.TextColor3 = Color3.fromRGB(130, 130, 130)
 			SectionLabel.TextSize = 10
 			SectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+			SectionLabel.LayoutOrder = 2
+			SectionLabel.Parent = SectionRow
 
-			-- Line after label (Redz style)
-			local lineX = labelX + SectionLabel.TextBounds.X + 6
+			-- Line: fills the remaining horizontal space
 			local SectionLine = Instance.new("Frame")
 			SectionLine.Name = "SectionLine"
-			SectionLine.Parent = SectionRow
-			SectionLine.AnchorPoint = Vector2.new(0, 0.5)
 			SectionLine.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
 			SectionLine.BorderSizePixel = 0
-			SectionLine.Position = UDim2.new(0, lineX, 0.5, 0)
-			SectionLine.Size = UDim2.new(1, -lineX, 0, 1)
+			SectionLine.AnchorPoint = Vector2.new(0, 0.5)
+			SectionLine.Size = UDim2.new(1, 0, 0, 1) -- fills remaining via layout
+			SectionLine.LayoutOrder = 3
+			SectionLine.Parent = SectionRow
 
-			-- After text bounds are ready, reposition line
-			task.defer(function()
+			-- Make the line fill whatever space is left after icon+label
+			-- by using a UISizeConstraint approach: let the row be a
+			-- normal frame but make the line use fill via a separate frame
+			-- [FIX] Simpler: don't put line in UIListLayout — position it
+			-- absolutely anchored to the right of the label instead
+			RowLayout:Destroy() -- remove the list layout approach
+
+			-- Rebuild with absolute positioning (reliable across all executors)
+			-- Icon at left
+			if hasSecIcon then
+				local icon = SectionRow:FindFirstChild("SectionIcon")
+				if icon then
+					icon.AnchorPoint = Vector2.new(0, 0.5)
+					icon.Position = UDim2.new(0, 2, 0.5, 0)
+					icon.Size = UDim2.new(0, 12, 0, 12)
+				end
+			end
+			LeftPad:Destroy()
+
+			local iconOffset = hasSecIcon and 20 or 0
+			SectionLabel.AutomaticSize = Enum.AutomaticSize.X
+			SectionLabel.AnchorPoint = Vector2.new(0, 0.5)
+			SectionLabel.Position = UDim2.new(0, iconOffset + 2, 0.5, 0)
+			SectionLabel.Size = UDim2.new(0, 0, 1, 0)
+
+			SectionLine:Destroy() -- recreate outside layout
+			local Line = Instance.new("Frame")
+			Line.Name = "SectionLine"
+			Line.Parent = SectionRow
+			Line.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+			Line.BorderSizePixel = 0
+			Line.AnchorPoint = Vector2.new(0, 0.5)
+			-- [FIX] Position line using AbsoluteSize signal so it always
+			-- starts right after the label text regardless of load timing
+			local function UpdateLine()
 				local tbX = SectionLabel.TextBounds.X
-				local newLineX = labelX + tbX + 6
-				SectionLine.Position = UDim2.new(0, newLineX, 0.5, 0)
-				SectionLine.Size = UDim2.new(1, -newLineX, 0, 1)
-			end)
+				local startX = iconOffset + 2 + tbX + 5
+				Line.Position = UDim2.new(0, startX, 0.5, 0)
+				Line.Size = UDim2.new(1, -startX - 4, 0, 1)
+			end
+			-- Update immediately and again once text renders
+			UpdateLine()
+			SectionLabel:GetPropertyChangedSignal("TextBounds"):Connect(UpdateLine)
 
 			-- InSec API (items go directly into ScrollLayers)
 			local InSec = {}
@@ -1551,7 +1607,7 @@ function obj:Window(cfw)
 				Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				Button.BackgroundTransparency = 0.97
 				Button.BorderSizePixel = 0
-				Button.LayoutOrder = 4
+				Button.LayoutOrder = (function() ContentOrder = ContentOrder + 1; return ContentOrder end)()
 				Button.Size = UDim2.new(1, -8, 0, 45)
 				UICorner_Btn.CornerRadius = UDim.new(0, 4)
 				UICorner_Btn.Parent = Button
@@ -1652,7 +1708,7 @@ function obj:Window(cfw)
 				Toggle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 				Toggle.BackgroundTransparency = 0.97
 				Toggle.BorderSizePixel = 0
-				Toggle.LayoutOrder = 2
+				Toggle.LayoutOrder = (function() ContentOrder = ContentOrder + 1; return ContentOrder end)()
 				Toggle.Size = UDim2.new(1, -8, 0, 45)
 				obj.Mouseto(Toggle, function()
 					Toggle.BackgroundTransparency = 0.95
@@ -1774,3 +1830,81 @@ end
 
 return obj
 
+--[[
+========================================================
+USAGE EXAMPLE
+========================================================
+
+local UI = loadstring(game:HttpGet("YOUR_RAW_URL"))()
+
+local win = UI:Window({
+    Title = "Darksoul Hub",
+    Description = "v1.0",
+    Size = UDim2.new(0, 620, 0, 440),
+    KeyCode = Enum.KeyCode.RightControl,
+})
+
+local tab = win:AddTab({
+    Title = "Combat",
+    Icon = "rbxassetid://10709791437",   -- provide your own asset id
+})
+
+-- Redz-style flat section divider
+local sec = tab:AddSection({ Title = "Aimbot", Icon = "rbxassetid://10734943674" })
+
+-- Add items to section (they live in the same scroll list, below the divider)
+sec:AddToggle("Out", {
+    Title = "Silent Aim",
+    Description = "Locks onto nearest target",
+    Default = false,
+    Callback = function(v) print("Silent Aim:", v) end
+})
+
+sec:AddButton("Out", {
+    Title = "Teleport to Ball",
+    ClickName = "Execute",
+    Callback = function() print("Teleported!") end
+})
+
+-- Notification (Redz-style slide-in toast)
+win:Notify({
+    Title = "Darksoul Hub",
+    Content = "Script loaded successfully!",
+    Icon = "rbxassetid://10709791437",
+    Duration = 5,
+})
+
+========================================================
+CHANGES SUMMARY
+========================================================
+[1] SCROLLABLE TABS
+    - ScrollTab now uses AutomaticCanvasSize = Y
+    - Scroll bar visible (blue, 3px) when tabs overflow
+    - No need to drag-resize the window to see hidden tabs
+
+[2] DRAG POSITION SAVED IN-MEMORY
+    - SavedWindowPosition updated on every drag end
+    - Window reopens at last known position (session only)
+    - ShowButton also uses proper MakeDraggable
+
+[3] REDZ-STYLE NOTIFICATIONS
+    - win:Notify({ Title, Content, Icon, Duration })
+    - Slides in from right, timed progress bar at bottom
+    - Click to dismiss early
+    - Stacks vertically (multiple at once)
+    - Accent bar on left side
+
+[4] REDZ-STYLE SECTIONS (flat dividers)
+    - tab:AddSection({ Title, Icon }) returns InSec API
+    - InSec:AddToggle / InSec:AddButton work as before
+    - Flat label + horizontal line (no expandable panel)
+    - Optional icon next to section label
+
+[5] BUG FIXES
+    - HideButton declared only once (was duplicated)
+    - CloseButton click event registered only once (was duplicated)
+    - DecideFrame UICorner parented to DecideFrame (was wrong)
+    - ScrollTab uses AutomaticCanvasSize (no manual CanvasSize needed)
+    - ShowButton uses MakeDraggable (was using deprecated .Draggable)
+    - AddSecion typo kept as alias for backward compatibility
+]]
