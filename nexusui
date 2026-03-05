@@ -370,16 +370,14 @@ function Nexus:Window(cfg)
     })
 
     -- logo dot
-    New("Frame", {
+    local dot = New("Frame", {
         BackgroundColor3 = theme.Accent,
         BorderSizePixel = 0,
         Position = UDim2.new(0, 14, 0.5, -4),
         Size = UDim2.new(0, 8, 0, 8),
         ZIndex = 4,
         Parent = TitleBar,
-    }):FindFirstChildWhichIsA("UICorner") or Corner(100, TitleBar:FindFirstChild("Frame"))
-
-    local dot = TitleBar:FindFirstChild("Frame")
+    })
     Corner(100, dot)
     New("UIGradient", {
         Color = ColorSequence.new(theme.AccentGlow, theme.Accent),
@@ -402,8 +400,8 @@ function Nexus:Window(cfg)
 
     New("TextLabel", {
         BackgroundTransparency = 1,
-        Position = UDim2.new(0, 30 + string.len(title) * 8 + 10, 0, 0),
-        Size = UDim2.new(0, 200, 1, 0),
+        Position = UDim2.new(0, 160, 0, 0),
+        Size = UDim2.new(1, -250, 1, 0),
         Font = Enum.Font.Gotham,
         Text = description,
         TextColor3 = theme.TextDim,
@@ -431,7 +429,7 @@ function Nexus:Window(cfg)
             Parent = TitleBar,
         })
         Corner(6, btn)
-        New("TextLabel", {
+        local btnLabel = New("TextLabel", {
             BackgroundTransparency = 1,
             Size = UDim2.new(1, 0, 1, 0),
             Font = Enum.Font.GothamBold,
@@ -443,11 +441,11 @@ function Nexus:Window(cfg)
         })
         btn.MouseEnter:Connect(function()
             Tween(btn, { BackgroundTransparency = 0.7 })
-            Tween(btn:FindFirstChildWhichIsA("TextLabel"), { TextColor3 = Color3.fromRGB(255,255,255) }, 0.15)
+            Tween(btnLabel, { TextColor3 = Color3.fromRGB(255,255,255) }, 0.15)
         end)
         btn.MouseLeave:Connect(function()
             Tween(btn, { BackgroundTransparency = 1 })
-            Tween(btn:FindFirstChildWhichIsA("TextLabel"), { TextColor3 = theme.TextMuted }, 0.15)
+            Tween(btnLabel, { TextColor3 = theme.TextMuted }, 0.15)
         end)
         return btn
     end
@@ -785,16 +783,14 @@ function Nexus:Window(cfg)
             })
 
             -- accent dot on header
-            New("Frame", {
+            local accentDot = New("Frame", {
                 BackgroundColor3 = theme.Accent,
                 BorderSizePixel = 0,
                 Position = UDim2.new(0, 12, 0.5, -4),
                 Size = UDim2.new(0, 4, 0, 8),
                 ZIndex = 5,
                 Parent = Header,
-            }).Parent:FindFirstChild("Frame") and nil or Corner(4, Header:GetChildren()[#Header:GetChildren()])
-
-            local accentDot = Header:FindFirstChild("Frame", true)
+            })
             Corner(4, accentDot)
 
             New("TextLabel", {
@@ -1127,13 +1123,19 @@ function Nexus:Window(cfg)
                         sliding = false
                     end
                 end)
-                RunService.RenderStepped:Connect(function()
+                local sliderConn
+                sliderConn = RunService.RenderStepped:Connect(function()
                     if sliding then
                         local abs = TrackBg.AbsolutePosition
                         local sz  = TrackBg.AbsoluteSize
-                        local mx  = Mouse.X
+                        local mx  = UserInputService:GetMouseLocation().X
                         local pct = math.clamp((mx - abs.X) / sz.X, 0, 1)
                         SetValue(sMin + (sMax - sMin) * pct)
+                    end
+                end)
+                TrackBg.AncestryChanged:Connect(function()
+                    if not TrackBg:IsDescendantOf(game) then
+                        sliderConn:Disconnect()
                     end
                 end)
 
@@ -1222,8 +1224,7 @@ function Nexus:Window(cfg)
                     DropPanel = New("Frame", {
                         BackgroundColor3 = theme.Surface,
                         BorderSizePixel = 0,
-                        Position = UDim2.new(0, DropBtn.AbsolutePosition.X - row.AbsolutePosition.X,
-                                             0, row.Size.Y.Offset + 2),
+                        Position = UDim2.new(1, -132, 0, row.Size.Y.Offset + 2),
                         Size = UDim2.new(0, 120, 0, panelHeight),
                         ZIndex = 20,
                         Parent = SectionFrame,
@@ -1296,8 +1297,15 @@ function Nexus:Window(cfg)
                 -- close on outside click
                 UserInputService.InputBegan:Connect(function(inp)
                     if inp.UserInputType == Enum.UserInputType.MouseButton1 and open then
-                        if DropPanel and not DropPanel.AbsolutePosition.X <= Mouse.X then
-                            ClosePanel()
+                        if DropPanel then
+                            local mousePos = UserInputService:GetMouseLocation()
+                            local abs = DropPanel.AbsolutePosition
+                            local sz  = DropPanel.AbsoluteSize
+                            local insideX = mousePos.X >= abs.X and mousePos.X <= abs.X + sz.X
+                            local insideY = mousePos.Y >= abs.Y and mousePos.Y <= abs.Y + sz.Y
+                            if not (insideX and insideY) then
+                                ClosePanel()
+                            end
                         end
                     end
                 end)
@@ -1485,7 +1493,7 @@ function Nexus:Window(cfg)
 
                 JoinBtn.MouseButton1Click:Connect(function()
                     if dLink ~= "" then
-                        setclipboard(dLink)
+                        pcall(function() setclipboard(dLink) end)
                     end
                     dCb()
                 end)
